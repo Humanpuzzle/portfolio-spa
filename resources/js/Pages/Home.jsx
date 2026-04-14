@@ -11,7 +11,6 @@ import TechStackSection from "@/components/sections/TechStackSection";
 import AboutSection from "@/components/sections/AboutSection";
 import Footer from "@/components/sections/Footer";
 import ScrollToTop from "@/components/sections/ScrollToTop";
-import { Toaster } from "react-hot-toast";
 
 export default function Home() {
     return (
@@ -29,7 +28,6 @@ export default function Home() {
             <AboutSection />
             <Footer />
             <ScrollToTop />
-            <Toaster position="bottom-right" />
         </MainLayout>
     );
 }

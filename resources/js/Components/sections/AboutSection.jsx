@@ -1,10 +1,14 @@
 import { motion } from "framer-motion";
 import { Send } from "lucide-react";
-import { useForm, Link, router } from "@inertiajs/react";
+import { useState } from "react";
+import axios from "axios";
+
 import Button from "@/Components/ui/Button";
 import { Input } from "@/Components/ui/Input";
 import { Textarea } from "@/Components/ui/Textarea";
-import toast from "react-hot-toast";
+import { Link } from "@inertiajs/react";
+
+import { notify } from "@/lib/notify";
 
 const aboutValues = [
     "Tiszta architektúra",
@@ -13,7 +17,7 @@ const aboutValues = [
 ];
 
 export default function AboutSection() {
-    const { data, setData, post, processing, errors, reset } = useForm({
+    const [data, setData] = useState({
         name: "",
         email: "",
         phone: "",
@@ -23,27 +27,54 @@ export default function AboutSection() {
         accepted: false,
     });
 
-    const handleSubmit = (e) => {
+    const [errors, setErrors] = useState({});
+    const [processing, setProcessing] = useState(false);
+
+    const handleChange = (key, value) => {
+        setData((prev) => ({
+            ...prev,
+            [key]: value,
+        }));
+    };
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if(!data.accepted) {
-            toast.error("Kérem fogadja el az adatkezelési tájékoztatót!");
+        setProcessing(true);
+        setErrors({});
+
+        if (!data.accepted) {
+            notify.error("Fogadd el az adatkezelési tájékoztatót!");
+            setProcessing(false);
             return;
         }
 
-        post("/contact", {
-            preserveScroll: true,
-            preserveState: true,
+        try {
+            const res = await axios.post("/contact", data);
 
-            onSuccess: () => {
-                reset();
-                toast.success("Üzenet sikeresen elküldve! Hamarosan jelentkezem.");
-            },
+            notify.success(res.data.message);
 
-            onError: () => {
-                toast.error("Hiba történt az üzenet elküldésekor.");
+            setData({
+                name: "",
+                email: "",
+                phone: "",
+                message: "",
+                company: "",
+                form_started_at: Date.now(),
+                accepted: false,
+            });
+        } catch (err) {
+            if (err.response?.status === 422) {
+                setErrors(err.response.data.errors || {});
+                notify.error("Kérlek javítsd a hibákat!");
+            } else {
+                notify.error(
+                    err.response?.data?.message || "Hiba történt az üzenetküldés során"
+                );
             }
-        });
+        } finally {
+            setProcessing(false);
+        }
     };
 
     return (
@@ -118,12 +149,14 @@ export default function AboutSection() {
                             <Input
                                 placeholder="Név"
                                 value={data.name}
-                                onChange={(e) => setData("name", e.target.value)}
+                                onChange={(e) =>
+                                    handleChange("name", e.target.value)
+                                }
                                 maxLength={100}
                             />
                             {errors.name && (
                                 <p className="text-red-500 text-sm">
-                                    {errors.name}
+                                    {errors.name[0]}
                                 </p>
                             )}
 
@@ -133,12 +166,12 @@ export default function AboutSection() {
                                 placeholder="Email"
                                 value={data.email}
                                 onChange={(e) =>
-                                    setData("email", e.target.value)
+                                    handleChange("email", e.target.value)
                                 }
                             />
                             {errors.email && (
                                 <p className="text-red-500 text-sm">
-                                    {errors.email}
+                                    {errors.email[0]}
                                 </p>
                             )}
 
@@ -148,38 +181,38 @@ export default function AboutSection() {
                                 placeholder="Telefon (opcionális)"
                                 value={data.phone}
                                 onChange={(e) =>
-                                    setData("phone", e.target.value)
+                                    handleChange("phone", e.target.value)
                                 }
                             />
                             {errors.phone && (
                                 <p className="text-red-500 text-sm">
-                                    {errors.phone}
+                                    {errors.phone[0]}
                                 </p>
                             )}
 
                             {/* HONEYPOT */}
                             <input
                                 type="text"
+                                className="hidden"
                                 value={data.company}
                                 onChange={(e) =>
-                                    setData("company", e.target.value)
+                                    handleChange("company", e.target.value)
                                 }
-                                className="hidden"
                             />
 
                             {/* MESSAGE */}
                             <Textarea
                                 placeholder="Projekt leírása..."
-                                value={data.message}
-                                onChange={(e) =>
-                                    setData("message", e.target.value)
-                                }
                                 rows={4}
                                 maxLength={1000}
+                                value={data.message}
+                                onChange={(e) =>
+                                    handleChange("message", e.target.value)
+                                }
                             />
                             {errors.message && (
                                 <p className="text-red-500 text-sm">
-                                    {errors.message}
+                                    {errors.message[0]}
                                 </p>
                             )}
 
@@ -190,7 +223,10 @@ export default function AboutSection() {
                                     type="checkbox"
                                     checked={data.accepted}
                                     onChange={(e) =>
-                                        setData("accepted", e.target.checked)
+                                        handleChange(
+                                            "accepted",
+                                            e.target.checked
+                                        )
                                     }
                                     className="mt-0.5"
                                 />
@@ -207,8 +243,8 @@ export default function AboutSection() {
                             <Button
                                 type="submit"
                                 size="lg"
-                                className="w-full inline-flex items-center gap-2 px-8 py-4 rounded-lg bg-primary text-primary-foreground font-semibold text-lg hover:brightness-110 transition-all"
                                 disabled={processing}
+                                className="w-full inline-flex items-center gap-2 px-8 py-4 rounded-lg bg-primary text-primary-foreground font-semibold text-lg hover:brightness-110 transition-all"
                             >
                                 {processing ? "Küldés..." : "Üzenet küldése"}
                                 <Send className="w-5 h-5 ml-2" />

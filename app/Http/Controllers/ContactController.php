@@ -17,25 +17,37 @@ class ContactController extends Controller
             'message' => 'required|min:10',
         ], [
             'name.required' => 'A név megadása kötelező.',
+            'name.min' => 'A név legalább 2 karakter legyen.',
+
             'email.required' => 'Az email megadása kötelező.',
+            'email.email' => 'Érvényes email címet adj meg.',
+
             'message.required' => 'Az üzenet mező kötelező.',
+            'message.min' => 'Az üzenet legalább 10 karakter legyen.',
+
+            'phone.phone' => 'Érvényes magyar telefonszámot adj meg.',
         ]);
 
         // honeypot
         if ($request->company) {
-            return response()->json(['message' => 'Spam detected'], 422);
+            return response()->json([
+                'message' => 'Spam detected'
+            ], 422);
         }
 
+        // speed check
         if ($request->form_started_at) {
-            $diff = now()->timestamp - (int)$request->form_started_at;
+            $diff = now()->getTimestampMs() - (int)$request->form_started_at;
 
-            if ($diff < 3) {
-                return response()->json(['message' => 'Too fast'], 422);
+            if ($diff < 3000) {
+                return response()->json([
+                    'message' => 'Too fast'
+                ], 422);
             }
         }
 
-        // TODO: mail / DB
-        Mail::to('your-email@example.com')->send(new ContactMessageMail($validated));
+        Mail::to('your-email@example.com')
+            ->send(new ContactMessageMail($validated));
 
         return response()->json([
             'message' => 'Üzenet sikeresen elküldve!',
